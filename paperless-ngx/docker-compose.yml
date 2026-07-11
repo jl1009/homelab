@@ -1,0 +1,77 @@
+version: "3.4"
+
+services:
+  broker:
+    image: docker.io/redis:7
+    restart: unless-stopped
+    volumes:
+      - ${REDIS_DATA_DIR}:/data
+
+  db:
+    image: docker.io/postgres:16
+    restart: unless-stopped
+    volumes:
+      - ${DB_DATA_DIR}:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+
+  gotenberg:
+    image: docker.io/gotenberg/gotenberg:8
+    restart: unless-stopped
+    # The chromium route is used to convert .eml files. 
+    # We disable javascript and external routes for security against tracking pixels.
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--chromium-allow-list=file:///tmp/.*"
+
+  tika:
+    image: docker.io/apache/tika:latest
+    restart: unless-stopped
+
+  webserver:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    restart: unless-stopped
+    depends_on:
+      - db
+      - broker
+      - gotenberg  
+      - tika       
+    ports:
+      - "${PORT}:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ${DATA_DIR}:/usr/src/paperless/data
+      - ${MEDIA_DIR}:/usr/src/paperless/media
+      - ${CONSUME_DIR}:/usr/src/paperless/consume
+      - ${EXPORT_DIR}:/usr/src/paperless/export
+    environment:
+      PAPERLESS_REDIS: redis://broker:6379
+      PAPERLESS_DBHOST: db
+      PAPERLESS_DBUSER: ${DB_USER}
+      PAPERLESS_DBPASS: ${DB_PASSWORD}
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY}
+      PAPERLESS_URL: ${PAPERLESS_URL}
+      PAPERLESS_TIME_ZONE: ${TZ}
+      PAPERLESS_OCR_LANGUAGE: ${PAPERLESS_OCR_LANGUAGE}
+      PAPERLESS_FILENAME_FORMAT: ${PAPERLESS_FILENAME_FORMAT}
+      PAPERLESS_CONSUMER_POLLING: ${PAPERLESS_CONSUMER_POLLING}
+      PAPERLESS_CONSUMER_RECURSIVE: "${PAPERLESS_CONSUMER_RECURSIVE}"
+      PAPERLESS_OCR_MODE: ${PAPERLESS_OCR_MODE}
+      USERMAP_UID: ${PUID}
+      USERMAP_GID: ${PGID}
+
+      PAPERLESS_TIKA_ENABLED: 1
+      PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://gotenberg:3000
+      PAPERLESS_TIKA_ENDPOINT: http://tika:9998
+
+networks:
+  default:
+    name: ${DOCKER_NETWORK}
+    external: true

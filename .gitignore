@@ -1,0 +1,10 @@
+# Ignore environment configuration files containing secrets
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
