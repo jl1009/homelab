@@ -37,12 +37,12 @@ services:
     depends_on:
       - db
       - broker
-      - gotenberg  
-      - tika       
+      - gotenberg
+      - tika
     ports:
       - "${PORT}:8000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -59,11 +59,11 @@ services:
       PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY}
       PAPERLESS_URL: ${PAPERLESS_URL}
       PAPERLESS_TIME_ZONE: ${TZ}
-      PAPERLESS_OCR_LANGUAGE: ${PAPERLESS_OCR_LANGUAGE}
-      PAPERLESS_FILENAME_FORMAT: ${PAPERLESS_FILENAME_FORMAT}
-      PAPERLESS_CONSUMER_POLLING: ${PAPERLESS_CONSUMER_POLLING}
-      PAPERLESS_CONSUMER_RECURSIVE: "${PAPERLESS_CONSUMER_RECURSIVE}"
-      PAPERLESS_OCR_MODE: ${PAPERLESS_OCR_MODE}
+      PAPERLESS_OCR_LANGUAGE: eng
+      PAPERLESS_FILENAME_FORMAT: "{{created_year}}/{{correspondent}}/{{document_type}}/{{title}}"
+      PAPERLESS_CONSUMER_POLLING: 90
+      PAPERLESS_CONSUMER_RECURSIVE: "true"
+      PAPERLESS_OCR_MODE: skip
       USERMAP_UID: ${PUID}
       USERMAP_GID: ${PGID}
 
