@@ -32,7 +32,7 @@ services:
     restart: unless-stopped
 
   webserver:
-    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    image: ghcr.io/paperless-ngx/paperless-ngx:v3.0.0-beta.rc1
     restart: unless-stopped
     depends_on:
       - db
