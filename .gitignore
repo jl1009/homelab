@@ -8,3 +8,6 @@
 # Ignore OS-specific files
 .DS_Store
 Thumbs.db
+
+# Ignore local homelab specification containing credentials
+.agents/references/homelab-spec.md
