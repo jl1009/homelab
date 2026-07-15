@@ -1,0 +1,48 @@
+version: '3.8'
+services:
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      # VPN Provider Setup
+      - VPN_SERVICE_PROVIDER=nordvpn
+      - VPN_TYPE=openvpn
+      
+      # Your NordVPN Service Credentials
+      - OPENVPN_USER=${OPENVPN_USER}
+      - OPENVPN_PASSWORD=${OPENVPN_PASSWORD}
+      
+      # Optional: Restrict to a specific country or server
+      - SERVER_COUNTRIES=${SERVER_COUNTRIES}
+      - SERVER_CITIES=${SERVER_CITIES}
+
+      # Built-in Kill Switch (On by default, explicitly declared here)
+      - FIREWALL=on
+    ports:
+      # Port mapping MUST be done on the Gluetun container, not qBittorrent
+      - 8081:8080       # qBittorrent Web UI
+      - 6881:6881       # qBittorrent TCP peering
+      - 6881:6881/udp   # qBittorrent UDP peering
+    restart: unless-stopped
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent
+    container_name: qbittorrent
+    # This forces qBittorrent to route entirely through Gluetun's network
+    network_mode: service:gluetun
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Los_Angeles
+      - WEBUI_PORT=8080
+    volumes:
+      # IMPORTANT: Use absolute paths on your host machine for Portainer
+      - /mnt/dietpi_userdata/Portainer/qbittorrent/:/config
+      - /mnt/dietpi_userdata/Storage/0. Unsorted/:/downloads
+    depends_on:
+      - gluetun
+    restart: unless-stopped
