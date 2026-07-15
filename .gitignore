@@ -4,6 +4,8 @@
 .env.development
 .env.production
 .env.staging
+*/*.env
+**/*.env
 
 # Ignore OS-specific files
 .DS_Store
