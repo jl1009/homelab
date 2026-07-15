@@ -1,66 +1,41 @@
 import argparse
-import ssl
 import sys
-import urllib.request
-import json
-from urllib.error import HTTPError
+from typing import Tuple, Optional
+from utils import make_portainer_request
 
-def get_ssl_context():
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    return ctx
-
-def find_stack_by_name(base_url, headers, stack_name):
-    url = f"{base_url.rstrip('/')}/api/stacks"
-    req = urllib.request.Request(url, headers=headers)
-    ctx = get_ssl_context()
+def find_stack_by_name(base_url: str, api_key: str, stack_name: str) -> Tuple[Optional[int], Optional[int]]:
+    """Search for a stack by its name in Portainer.
+    
+    Returns a tuple of (stack_id, endpoint_id), or (None, None) if not found.
+    """
     try:
-        with urllib.request.urlopen(req, context=ctx) as response:
-            if response.status == 200:
-                stacks = json.loads(response.read().decode())
-                for stack in stacks:
-                    if stack.get("Name") == stack_name:
-                        return stack.get("Id"), stack.get("EndpointId")
+        stacks = make_portainer_request(base_url, "/api/stacks", api_key)
+        if isinstance(stacks, list):
+            for stack in stacks:
+                if stack.get("Name") == stack_name:
+                    return stack.get("Id"), stack.get("EndpointId")
     except Exception as e:
-        print(f"[Error] Failed to query stacks: {e}")
+        print(f"[Warning] Failed to query stacks: {e}")
     return None, None
 
-def delete_stack(base_url, api_key, stack_name):
-    headers = {
-        "X-API-Key": api_key,
-        "Accept": "application/json"
-    }
+def delete_stack(base_url: str, api_key: str, stack_name: str) -> None:
+    """Find a stack by name and delete it from Portainer.
     
+    Raises RuntimeError on API failure.
+    """
     print(f"Finding stack '{stack_name}' in Portainer...")
-    stack_id, endpoint_id = find_stack_by_name(base_url, headers, stack_name)
+    stack_id, endpoint_id = find_stack_by_name(base_url, api_key, stack_name)
     
     if not stack_id:
         print(f"[Info] Stack '{stack_name}' not found. No deletion needed.")
         return
         
     print(f"Found Stack ID: {stack_id}, Endpoint ID: {endpoint_id}. Deleting...")
-    delete_url = f"{base_url.rstrip('/')}/api/stacks/{stack_id}?endpointId={endpoint_id}"
-    req = urllib.request.Request(delete_url, headers=headers, method="DELETE")
+    delete_endpoint = f"/api/stacks/{stack_id}?endpointId={endpoint_id}"
     
-    try:
-        with urllib.request.urlopen(req, context=get_ssl_context()) as response:
-            # Portainer returns 204 No Content on successful deletion
-            if response.status in [200, 204]:
-                print(f"[Success] Stack '{stack_name}' deleted successfully.")
-            else:
-                print(f"[Warning] Delete request returned status code: {response.status}")
-    except HTTPError as e:
-        print(f"[Error] Failed to delete stack. HTTP Status: {e.code}")
-        try:
-            error_data = json.loads(e.read().decode())
-            print(f"Details: {error_data}")
-        except:
-            print(f"Raw Response: {e.read().decode()}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"[Error] Unexpected error during deletion: {e}")
-        sys.exit(1)
+    # A successful delete request returns 204 No Content, which make_portainer_request handles
+    make_portainer_request(base_url, delete_endpoint, api_key, method="DELETE")
+    print(f"[Success] Stack '{stack_name}' deleted successfully.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Delete a Portainer Stack by Name")
@@ -68,4 +43,9 @@ if __name__ == "__main__":
     parser.add_argument("--api-key", required=True, help="Portainer API Key")
     parser.add_argument("--stack-name", required=True, help="Name of the stack to delete")
     args = parser.parse_args()
-    delete_stack(args.url, args.api_key, args.stack_name)
+    
+    try:
+        delete_stack(args.url, args.api_key, args.stack_name)
+    except Exception as e:
+        print(f"[Error] Failed to delete stack: {e}")
+        sys.exit(1)

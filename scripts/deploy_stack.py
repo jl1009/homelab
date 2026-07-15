@@ -1,104 +1,87 @@
 import argparse
 import json
-import ssl
 import sys
-import urllib.request
-from urllib.error import HTTPError
+from typing import List, Dict, Optional
+from utils import make_portainer_request
 
-def get_ssl_context():
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    return ctx
-
-def get_endpoint_id(base_url, headers):
-    endpoints_url = f"{base_url.rstrip('/')}/api/endpoints"
-    req = urllib.request.Request(endpoints_url, headers=headers)
-    ctx = get_ssl_context()
+def get_endpoint_id(base_url: str, api_key: str) -> int:
+    """Retrieve the ID of the first active endpoint/environment in Portainer.
     
+    Raises RuntimeError if no environments are found or if the request fails.
+    """
+    data = make_portainer_request(base_url, "/api/endpoints", api_key)
+    if isinstance(data, list) and data:
+        # Returns the first available endpoint ID
+        return data[0].get("Id")
+    raise RuntimeError("No active Portainer environments found.")
+
+def parse_env_file(env_file_path: str) -> List[Dict[str, str]]:
+    """Parse a local .env file into the JSON structure expected by Portainer API.
+    
+    Format: [{"name": "KEY", "value": "VAL"}, ...]
+    """
+    env_vars: List[Dict[str, str]] = []
     try:
-        with urllib.request.urlopen(req, context=ctx) as response:
-            if response.status == 200:
-                data = json.loads(response.read().decode())
-                if data:
-                    # In a typical homelab, the local Portainer agent is Endpoint ID 1 or 2.
-                    for endpoint in data:
-                        return endpoint.get("Id")
-                print("Error: No Portainer environments found.")
-                sys.exit(1)
-            else:
-                print(f"Error fetching endpoints. HTTP Status: {response.status}")
-                sys.exit(1)
+        with open(env_file_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, val = line.split('=', 1)
+                    val = val.strip()
+                    # Remove surrounding quotes from value if present
+                    if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+                        val = val[1:-1]
+                    env_vars.append({"name": key.strip(), "value": val})
     except Exception as e:
-        print(f"Error connecting to Portainer API to get endpoints: {e}")
-        sys.exit(1)
+        raise RuntimeError(f"Error reading env file: {e}") from e
+    return env_vars
 
-def deploy_stack(args):
-    base_url = args.url.rstrip('/')
-    headers = {
-        "X-API-Key": args.api_key,
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-    }
-
+def deploy_stack(
+    base_url: str,
+    api_key: str,
+    stack_name: str,
+    repo_url: str,
+    repo_ref: str = "refs/heads/main",
+    compose_path: str = "docker-compose.yml",
+    env_file: Optional[str] = None,
+    git_username: Optional[str] = None,
+    git_password: Optional[str] = None
+) -> None:
+    """Deploy a standalone Docker stack via a Git repository reference using Portainer API.
+    
+    Raises RuntimeError on failure.
+    """
     print(f"Connecting to Portainer at: {base_url}...")
-    endpoint_id = get_endpoint_id(base_url, headers)
+    endpoint_id = get_endpoint_id(base_url, api_key)
     print(f"Found Target Endpoint ID: {endpoint_id}")
 
-    # Portainer API payload for creating a stack from a git repository
-    # method=repository for git, type=2 for standalone Docker
-    create_stack_url = f"{base_url}/api/stacks/create/standalone/repository?endpointId={endpoint_id}"
+    create_stack_endpoint = f"/api/stacks/create/standalone/repository?endpointId={endpoint_id}"
     
-    env_vars = []
-    if args.env_file:
-        try:
-            with open(args.env_file, 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith('#') and '=' in line:
-                        key, val = line.split('=', 1)
-                        # Remove surrounding quotes from value if present
-                        val = val.strip()
-                        if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
-                            val = val[1:-1]
-                        env_vars.append({"name": key.strip(), "value": val})
-        except Exception as e:
-            print(f"Error reading env file: {e}")
-            sys.exit(1)
+    env_vars = parse_env_file(env_file) if env_file else []
 
     payload = {
-        "Name": args.stack_name,
-        "RepositoryURL": args.repo_url,
-        "RepositoryReferenceName": args.repo_ref,
-        "ComposeFile": args.compose_path,
+        "Name": stack_name,
+        "RepositoryURL": repo_url,
+        "RepositoryReferenceName": repo_ref,
+        "ComposeFile": compose_path,
         "RepositoryAuthentication": False,
         "Env": env_vars,
     }
 
-    if args.git_username and args.git_password:
+    if git_username and git_password:
         payload["RepositoryAuthentication"] = True
-        payload["RepositoryUsername"] = args.git_username
-        payload["RepositoryPassword"] = args.git_password
+        payload["RepositoryUsername"] = git_username
+        payload["RepositoryPassword"] = git_password
 
-    data = json.dumps(payload).encode('utf-8')
-    req = urllib.request.Request(create_stack_url, data=data, headers=headers, method='POST')
-    
-    try:
-        with urllib.request.urlopen(req, context=get_ssl_context()) as response:
-            resp_data = json.loads(response.read().decode())
-            print(f"\n[Success] Stack '{args.stack_name}' created successfully!")
-            print(f"Stack Details: {json.dumps(resp_data, indent=2)}")
-    except HTTPError as e:
-        print(f"\n[Error] Failed to create stack. HTTP Status: {e.code}")
-        try:
-            error_data = json.loads(e.read().decode())
-            print(f"Details: {error_data}")
-        except:
-            print(f"Raw Response: {e.read().decode()}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"\n[Error] An unexpected error occurred: {e}")
-        sys.exit(1)
+    resp_data = make_portainer_request(
+        base_url,
+        create_stack_endpoint,
+        api_key,
+        method='POST',
+        payload=payload
+    )
+    print(f"\n[Success] Stack '{stack_name}' created successfully!")
+    print(f"Stack Details: {json.dumps(resp_data, indent=2)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Deploy a Docker Stack via Portainer API using a Git Repository")
@@ -113,4 +96,19 @@ if __name__ == "__main__":
     parser.add_argument("--git-password", help="Git repository password or PAT")
     
     args = parser.parse_args()
-    deploy_stack(args)
+    
+    try:
+        deploy_stack(
+            base_url=args.url,
+            api_key=args.api_key,
+            stack_name=args.stack_name,
+            repo_url=args.repo_url,
+            repo_ref=args.repo_ref,
+            compose_path=args.compose_path,
+            env_file=args.env_file,
+            git_username=args.git_username,
+            git_password=args.git_password
+        )
+    except Exception as e:
+        print(f"\n[Error] Failed to deploy stack: {e}")
+        sys.exit(1)

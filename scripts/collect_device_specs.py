@@ -1,20 +1,15 @@
 import argparse
 import json
 import os
-import ssl
 import subprocess
 import sys
 import urllib.request
 from urllib.error import HTTPError
+from typing import Dict, Any, List, Optional
+from utils import get_ssl_context
 
-def get_ssl_context():
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    return ctx
-
-def run_ssh_command(ip, user, password, command):
-    # Try using sshpass if password is provided
+def run_ssh_command(ip: str, user: str, password: Optional[str], command: str) -> Optional[str]:
+    """Execute a shell command on a remote host via SSH, supporting optional password input via sshpass."""
     if password:
         ssh_cmd = [
             "sshpass", "-p", password,
@@ -23,7 +18,6 @@ def run_ssh_command(ip, user, password, command):
             f"{user}@{ip}", command
         ]
     else:
-        # Fallback to standard ssh (will prompt interactively)
         ssh_cmd = [
             "ssh", "-o", "StrictHostKeyChecking=no",
             "-o", "ConnectTimeout=5",
@@ -47,9 +41,13 @@ def run_ssh_command(ip, user, password, command):
         print(f"Exception executing SSH to {ip}: {e}")
         return None
 
-def generate_portainer_api_key(url, username, password):
+def generate_portainer_api_key(url: str, username: str, password: str) -> Optional[str]:
+    """Authenticate with Portainer and generate a new API key.
+    
+    Uses standard JWT Bearer token authentication to request the token.
+    """
     base_url = url.rstrip('/')
-    ctx = get_ssl_context()
+    ctx = get_ssl_context(verify=False)
     
     # 1. Authenticate to get JWT
     auth_url = f"{base_url}/api/auth"
@@ -73,7 +71,7 @@ def generate_portainer_api_key(url, username, password):
         print(f"Portainer Auth failed on {url}. Status: {e.code}, Reason: {e.reason}")
         try:
             print("Error Details:", e.read().decode())
-        except:
+        except Exception:
             pass
         return None
     except Exception as e:
@@ -120,7 +118,15 @@ def generate_portainer_api_key(url, username, password):
         print(f"Failed to create Portainer API Key: {e}")
         return None
 
-def collect_device_specs(ip, user, password, portainer_url, portainer_user, portainer_pass):
+def collect_device_specs(
+    ip: str,
+    user: str,
+    password: Optional[str],
+    portainer_url: Optional[str],
+    portainer_user: Optional[str],
+    portainer_pass: Optional[str]
+) -> Dict[str, Any]:
+    """Gather hardware specs, storage mounts, running containers, and API keys from a homelab device."""
     print(f"\n=========================================")
     print(f"Collecting specs for device: {ip}...")
     print(f"=========================================")
@@ -183,7 +189,7 @@ def collect_device_specs(ip, user, password, portainer_url, portainer_user, port
     # 8. Mounts
     print("[2/4] Reading mounts...")
     mounts_raw = run_ssh_command(ip, user, password, "df -hT | grep -v -E 'tmpfs|devtmpfs|overlay|shm|udev'")
-    mounts_list = []
+    mounts_list: List[str] = []
     if mounts_raw:
         for line in mounts_raw.splitlines():
             # Skip header
@@ -199,11 +205,9 @@ def collect_device_specs(ip, user, password, portainer_url, portainer_user, port
     
     # 9. Docker Containers
     print("[3/4] Checking running containers...")
-    # Try running docker ps normally; if that fails or returns empty (permission denied / docker not in user group),
-    # try running with sudo (using echo password | sudo -S).
-    docker_cmd = "docker ps -a --format '{{.Names}} ({{.Ports}})' 2>/dev/null || (echo '" + password + "' | sudo -S docker ps -a --format '{{.Names}} ({{.Ports}})' 2>/dev/null)"
+    docker_cmd = "docker ps -a --format '{{.Names}} ({{.Ports}})' 2>/dev/null || (echo '" + (password or "") + "' | sudo -S docker ps -a --format '{{.Names}} ({{.Ports}})' 2>/dev/null)"
     docker_raw = run_ssh_command(ip, user, password, docker_cmd)
-    containers = []
+    containers: List[str] = []
     if docker_raw:
         for line in docker_raw.splitlines():
             # Skip password prompt output from sudo -S (e.g. "[sudo] password for ...:")
@@ -239,7 +243,8 @@ def collect_device_specs(ip, user, password, portainer_url, portainer_user, port
         "ssh_pass": password
     }
 
-def update_spec_file(device_data, spec_path):
+def update_spec_file(device_data: Dict[str, Any], spec_path: str) -> bool:
+    """Write device specs and configuration sections back to the homelab-spec.md file."""
     if not os.path.exists(spec_path):
         print(f"Error: Specification file not found at {spec_path}")
         return False
@@ -368,11 +373,8 @@ if __name__ == "__main__":
             portainer_pass = creds_data[name].get("portainer_pass", "")
         else:
             print(f"\n>>> Input Credentials for {name} ({info['ip']}) <<<")
-            # 1. SSH Creds
             ssh_user = input(f"SSH Username [{info['default_ssh_user']}]: ").strip() or info['default_ssh_user']
             ssh_pass = input(f"SSH Password (hit Enter if no password/key auth): ").strip()
-            
-            # 2. Portainer Creds
             portainer_user = input(f"Portainer Admin User [admin]: ").strip() or "admin"
             portainer_pass = input(f"Portainer Admin Password: ").strip()
 
