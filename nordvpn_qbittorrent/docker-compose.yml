@@ -7,6 +7,8 @@ services:
       - NET_ADMIN
     devices:
       - /dev/net/tun:/dev/net/tun
+    volumes:
+      - /mnt/dietpi_userdata/Portainer/gluetun:/gluetun
     environment:
       # VPN Provider Setup
       - VPN_SERVICE_PROVIDER=nordvpn
@@ -22,6 +24,7 @@ services:
 
       # Built-in Kill Switch (On by default, explicitly declared here)
       - FIREWALL=on
+      - UPDATER_PERIOD=480h
     ports:
       # Port mapping MUST be done on the Gluetun container, not qBittorrent
       - 8081:8080       # qBittorrent Web UI
