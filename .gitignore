@@ -12,7 +12,7 @@
 Thumbs.db
 
 # Ignore local homelab specification containing credentials
-.agents/references/homelab-spec.md
+.agents/references/homelab-spec.json
 
 # Ignore local rclone config containing credentials
 rclone.conf

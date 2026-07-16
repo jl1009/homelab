@@ -201,7 +201,7 @@ def collect_device_specs(
                 # Filter out standard system paths to focus on user mounts
                 if target in ['/', '/boot', '/boot/efi'] or target.startswith('/sys') or target.startswith('/proc') or target.startswith('/dev'):
                     continue
-                mounts_list.append(f"  - `{fs}` -> `{target}` ({size} {fs_type})")
+                mounts_list.append(f"{fs} -> {target} ({size} {fs_type})")
     
     # 9. Docker Containers
     print("[3/4] Checking running containers...")
@@ -244,81 +244,55 @@ def collect_device_specs(
     }
 
 def update_spec_file(device_data: Dict[str, Any], spec_path: str) -> bool:
-    """Write device specs and configuration sections back to the homelab-spec.md file."""
+    """Write device specs and configuration sections back to the homelab-spec.json file."""
     if not os.path.exists(spec_path):
         print(f"Error: Specification file not found at {spec_path}")
         return False
     
-    with open(spec_path, 'r') as f:
-        content = f.read()
+    try:
+        with open(spec_path, 'r') as f:
+            specs = json.load(f)
+    except Exception as e:
+        print(f"Error reading JSON from {spec_path}: {e}")
+        return False
 
-    hostname = device_data["hostname"]
-    
-    # Format mounts
-    mounts_str = ""
-    if device_data["mounts"]:
-        mounts_str = "\n".join(device_data["mounts"])
-    else:
-        mounts_str = "  - None"
+    hostname = device_data.get("hostname")
+    if not hostname:
+        return False
 
-    # Format containers
-    containers_str = ", ".join(device_data["containers"]) if device_data["containers"] else "None"
+    if "devices" not in specs:
+        specs["devices"] = {}
 
-    # Portainer key detail
-    api_key_str = f"`{device_data['api_key']}`" if device_data["api_key"] else "`[API_KEY_FAILED_TO_GENERATE]`"
+    specs["devices"][hostname] = {
+        "ip": device_data["ip"],
+        "mac": device_data["mac"],
+        "arch": device_data["arch"],
+        "os": device_data["os"],
+        "uid": device_data["uid"],
+        "cpu": device_data["cpu"],
+        "ram": device_data["ram"],
+        "gpu": device_data["gpu"],
+        "mounts": device_data["mounts"] if device_data["mounts"] else [],
+        "containers": device_data["containers"],
+        "credentials": {
+            "portainer_api_key": device_data["api_key"] or "[API_KEY_FAILED_TO_GENERATE]",
+            "ssh_user": device_data["ssh_user"],
+            "ssh_pass": device_data["ssh_pass"]
+        }
+    }
 
-    device_template = f"""### {hostname}
-- **IP / MAC**: `{device_data['ip']}` / `{device_data['mac']}` (`{device_data['arch']}` | {device_data['os']} | UID: `{device_data['uid']}`)
-- **Specs**: {device_data['cpu']} | {device_data['ram']} | GPU: {device_data['gpu']}
-- **Mounts**:
-{mounts_str}
-- **Containers**: {containers_str}
-- **Credentials**:
-  - Portainer API Key: {api_key_str}
-  - SSH: `{device_data['ssh_user']}@{device_data['ip']}` (password: `{device_data['ssh_pass']}`)
-"""
-
-    # Check if this device section already exists in the file
-    section_header = f"### {hostname}"
-    if section_header in content:
-        # Replace the existing section
-        lines = content.splitlines()
-        start_idx = -1
-        end_idx = len(lines)
-        
-        for idx, line in enumerate(lines):
-            if line.startswith(section_header):
-                start_idx = idx
-                break
-        
-        if start_idx != -1:
-            # Find the next h3 (### ) or h2 (## ) section to find the end
-            for idx in range(start_idx + 1, len(lines)):
-                if lines[idx].startswith("### ") or lines[idx].startswith("## "):
-                    end_idx = idx
-                    break
-            
-            # Replace the lines
-            new_lines = lines[:start_idx] + device_template.splitlines() + lines[end_idx:]
-            content = "\n".join(new_lines)
-            print(f"Updated section for {hostname} in {spec_path}")
-    else:
-        # Append before the GitHub Integration section if it exists, otherwise at the end
-        github_header = "## 🐙 GitHub Integration"
-        if github_header in content:
-            content = content.replace(github_header, f"{device_template}\n{github_header}")
-            print(f"Added section for {hostname} in {spec_path}")
-        else:
-            content += f"\n{device_template}"
-            print(f"Appended section for {hostname} to end of {spec_path}")
-
-    with open(spec_path, 'w') as f:
-        f.write(content)
-    return True
+    try:
+        with open(spec_path, 'w') as f:
+            json.dump(specs, f, indent=2)
+        print(f"Updated section for {hostname} in {spec_path}")
+        return True
+    except Exception as e:
+        print(f"Error writing JSON to {spec_path}: {e}")
+        return False
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Collect specs from homelab devices and update homelab-spec.md")
-    parser.add_argument("--spec-path", default="../.agents/references/homelab-spec.md", help="Path to homelab-spec.md")
+    parser = argparse.ArgumentParser(description="Collect specs from homelab devices and update homelab-spec.json")
+    parser.add_argument("--spec-path", default="../.agents/references/homelab-spec.json", help="Path to homelab-spec.json")
     parser.add_argument("--device", choices=["Wyse1", "WumbologyNAS", "DietPi", "Wyse2"], help="Only run for a specific device")
     parser.add_argument("--creds", help="Path to JSON file containing credentials for non-interactive run")
     args = parser.parse_args()
