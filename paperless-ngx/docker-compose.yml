@@ -61,8 +61,6 @@ services:
       PAPERLESS_TIME_ZONE: ${TZ}
       PAPERLESS_OCR_LANGUAGE: eng
       PAPERLESS_FILENAME_FORMAT: "{{created_year}}/{{correspondent}}/{{document_type}}/{{title}}"
-      PAPERLESS_CONSUMER_POLLING: 90
-      PAPERLESS_CONSUMER_RECURSIVE: "true"
       PAPERLESS_OCR_MODE: auto
       PAPERLESS_REMOTE_OCR_ENGINE: azureai
       PAPERLESS_REMOTE_OCR_ENDPOINT: ${PAPERLESS_AZURE_OCR_ENDPOINT}
