@@ -1,0 +1,45 @@
+version: "3.4"
+
+services:
+  paperless-gpt:
+    image: icereed/paperless-gpt:latest
+    restart: unless-stopped
+    ports:
+      - "${PORT}:8080"
+    volumes:
+      - ./prompts:/app/prompts
+      - ./config:/app/config
+    environment:
+      PAPERLESS_BASE_URL: ${PAPERLESS_BASE_URL}
+      PAPERLESS_API_TOKEN: ${PAPERLESS_API_TOKEN}
+      PAPERLESS_PUBLIC_URL: ${PAPERLESS_PUBLIC_URL}
+
+      # OCR Configuration (Azure Document Intelligence -> Markdown)
+      OCR_PROVIDER: ${OCR_PROVIDER}
+      AZURE_DOCAI_ENDPOINT: ${AZURE_DOCAI_ENDPOINT}
+      AZURE_DOCAI_KEY: ${AZURE_DOCAI_KEY}
+      AZURE_DOCAI_MODEL_ID: ${AZURE_DOCAI_MODEL_ID}
+      AZURE_DOCAI_OUTPUT_CONTENT_FORMAT: ${AZURE_DOCAI_OUTPUT_CONTENT_FORMAT}
+      AZURE_DOCAI_TIMEOUT_SECONDS: ${AZURE_DOCAI_TIMEOUT_SECONDS}
+      OCR_PROCESS_MODE: ${OCR_PROCESS_MODE}
+      OCR_LIMIT_PAGES: ${OCR_LIMIT_PAGES}
+
+      # LLM Configuration (Azure OpenAI)
+      LLM_PROVIDER: ${LLM_PROVIDER}
+      OPENAI_API_TYPE: ${OPENAI_API_TYPE}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LLM_MODEL: ${LLM_MODEL}
+      LLM_LANGUAGE: ${LLM_LANGUAGE}
+
+      # Workflow & Tagging Settings
+      MANUAL_TAG: ${MANUAL_TAG}
+      AUTO_TAG: ${AUTO_TAG}
+      FAIL_TAG: ${FAIL_TAG}
+      AUTO_OCR_TAG: ${AUTO_OCR_TAG}
+      LOG_LEVEL: ${LOG_LEVEL}
+
+networks:
+  default:
+    name: ${DOCKER_NETWORK}
+    external: true
