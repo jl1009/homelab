@@ -1,0 +1,12 @@
+{{- $pages := splitList "<!-- PageBreak -->" .Content -}}
+{{- $trimmedContent := .Content -}}
+{{- if gt (len $pages) 5 -}}
+  {{- $trimmedContent = slice $pages 0 5 | join "<!-- PageBreak -->" -}}
+{{- end -}}
+Generate a concise, descriptive document title for Paperless-ngx based on the content (likely in {{.Language}}).
+If the original title is meaningful (not a technical filename), use it for context.
+Respond ONLY with the generated title. Make it as concise as possible (under 8-10 words). Do not include quotes, markdown bold, explanation, or preamble.
+
+Original Title: {{.Title}}
+Content (first 5 pages max):
+{{$trimmedContent}}
