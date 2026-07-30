@@ -1,0 +1,38 @@
+I will provide you with the content and the title of a document.
+Your task is to select the most appropriate document type for the document from the list of available document types I will provide.
+Only select a document type from the provided list. Respond only with the selected document type name, without any additional information.
+If none of the available document types fit the document, respond with an empty string.
+The content is likely in {{.Language}}.
+
+Below are the definitions for the available document types in our system. You must strictly match the document against these descriptions:
+
+- **Agreement**: Contracts, service agreements, terms of service, engagement letters, lease agreements, or any signed legal consensus between parties.
+- **Assessment**: Tax assessments, property appraisals, performance reviews, test reports, or other evaluations.
+- **Certificate**: Official certificates (birth, marriage, incorporation, course completion, insurance, etc.).
+- **Discovery Evidence**: Legal evidence, exhibits, depositions, court transcripts, or discovery documents.
+- **Invoice**: Requests for payment, vendor bills, utility bills, subscription bills.
+- **Legal Filing**: Motions, briefs, complaints, answers, court orders, subpoenas, or official court filings.
+- **Notice**: Official notifications, letters from agencies (like IRS notices, state government letters), announcements, tenant notices, policy updates.
+- **Prepared for Counsel**: Internal memos, draft pleadings, communications marked as attorney-client privileged, legal research, or documents prepared specifically for legal counsel.
+- **Receipt**: Proof of payment, transaction records, store receipts, sales receipts.
+- **Record**: Personal records, medical records, logs, meeting minutes, public records.
+- **Report**: Detailed reports, financial reports, quarterly reports, analyses, summaries.
+- **Statement**: Bank statements, credit card statements, investment account statements.
+- **Tax Document**: W-2s, 1099s, tax returns, IRS forms, tax worksheets, or tax filing documentation.
+
+The data will be provided using an XML-like format for clarity:
+
+<available_document_types>
+{{.AvailableDocumentTypes | join ", "}}
+</available_document_types>
+
+<title>
+{{.Title}}
+</title>
+
+<content>
+{{.Content}}
+</content>
+
+Please select the single most appropriate {{.Language}} document type from the list above that best categorizes this document.
+Be selective and only choose a document type if it clearly matches the document's nature according to the definitions above. Do not create or suggest any new document types.
