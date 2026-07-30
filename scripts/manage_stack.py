@@ -70,8 +70,34 @@ def delete_stack(args):
     make_portainer_request(args.url, delete_endpoint, args.api_key, method="DELETE")
     print(f"[Success] Stack '{args.stack_name}' deleted successfully.")
 
+def stop_stack(args: argparse.Namespace) -> None:
+    print(f"Finding stack '{args.stack_name}' in Portainer...")
+    stack_id, endpoint_id = find_stack_by_name(args.url, args.api_key, args.stack_name)
+    if not stack_id:
+        raise RuntimeError(f"Stack '{args.stack_name}' not found.")
+    
+    print(f"Found Stack ID: {stack_id}, Endpoint ID: {endpoint_id}. Stopping...")
+    stop_endpoint = f"/api/stacks/{stack_id}/stop?endpointId={endpoint_id}"
+    resp = make_portainer_request(args.url, stop_endpoint, args.api_key, method="POST")
+    print(f"[Success] Stack '{args.stack_name}' stopped successfully!")
+    if resp:
+        print(f"Details: {json.dumps(resp, indent=2)}")
+
+def start_stack(args: argparse.Namespace) -> None:
+    print(f"Finding stack '{args.stack_name}' in Portainer...")
+    stack_id, endpoint_id = find_stack_by_name(args.url, args.api_key, args.stack_name)
+    if not stack_id:
+        raise RuntimeError(f"Stack '{args.stack_name}' not found.")
+    
+    print(f"Found Stack ID: {stack_id}, Endpoint ID: {endpoint_id}. Starting...")
+    start_endpoint = f"/api/stacks/{stack_id}/start?endpointId={endpoint_id}"
+    resp = make_portainer_request(args.url, start_endpoint, args.api_key, method="POST")
+    print(f"[Success] Stack '{args.stack_name}' started successfully!")
+    if resp:
+        print(f"Details: {json.dumps(resp, indent=2)}")
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Manage Portainer Stacks (deploy, redeploy, delete)")
+    parser = argparse.ArgumentParser(description="Manage Portainer Stacks (deploy, redeploy, delete, stop, start)")
     parser.add_argument("--url", required=True, help="Portainer URL")
     parser.add_argument("--api-key", required=True, help="Portainer API Key")
     
@@ -95,6 +121,14 @@ if __name__ == "__main__":
     # Delete
     delete_parser = subparsers.add_parser("delete", help="Delete a stack by name")
     delete_parser.add_argument("--stack-name", required=True, help="Name of the stack to delete")
+
+    # Stop
+    stop_parser = subparsers.add_parser("stop", help="Stop a stack by name")
+    stop_parser.add_argument("--stack-name", required=True, help="Name of the stack to stop")
+
+    # Start
+    start_parser = subparsers.add_parser("start", help="Start a stack by name")
+    start_parser.add_argument("--stack-name", required=True, help="Name of the stack to start")
     
     args = parser.parse_args()
     
@@ -105,6 +139,10 @@ if __name__ == "__main__":
             redeploy_stack(args)
         elif args.action == "delete":
             delete_stack(args)
+        elif args.action == "stop":
+            stop_stack(args)
+        elif args.action == "start":
+            start_stack(args)
     except Exception as e:
         print(f"\n[Error] {e}")
         sys.exit(1)
