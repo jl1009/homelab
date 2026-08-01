@@ -44,3 +44,10 @@ When you need to poll or wait for a condition (container health, deployment read
 
 ### Remote Execution
 All `command` and `docker` mode polls support `--host user@host` to run the check on a remote machine via SSH. Use this for checking services on Wyse1/Wyse2 from the local Mac.
+
+## 4. No Third-Party Code Reverse-Engineering Loops
+When debugging external/third-party services or Docker images (e.g. `paperless-ngx`, `paperless-gpt`):
+- **Documentation First**: Use official guides, schemas, and logs instead of static analysis on source code.
+- **No File Scraping**: Do not sequentially download/grep multiple source files from external Git repositories.
+- **Hard Limit**: If source inspection is necessary, check **at most 2 files**. If unresolved, stop and ask the user instead of guessing/pulling more code.
+
