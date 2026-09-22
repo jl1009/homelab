@@ -12,9 +12,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 6144M
+          memory: 1024M
         reservations:
-          memory: 512M
+          memory: 256M
     environment:
       PAPERLESS_BASE_URL: ${PAPERLESS_BASE_URL}
       PAPERLESS_API_TOKEN: ${PAPERLESS_API_TOKEN}
