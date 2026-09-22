@@ -51,7 +51,7 @@ services:
       - ${MEDIA_DIR}:/usr/src/paperless/media
       - ${CONSUME_DIR}:/usr/src/paperless/consume
       - ${EXPORT_DIR}:/usr/src/paperless/export
-      - ./scripts:/usr/src/paperless/scripts
+      - ${SCRIPTS_DIR}:/usr/src/paperless/scripts
     environment:
       PAPERLESS_REDIS: redis://broker:6379
       PAPERLESS_DBHOST: db
