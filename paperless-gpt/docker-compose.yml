@@ -9,6 +9,12 @@ services:
     volumes:
       - ./prompts:/app/prompts
       - ./config:/app/config
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 256M
     environment:
       PAPERLESS_BASE_URL: ${PAPERLESS_BASE_URL}
       PAPERLESS_API_TOKEN: ${PAPERLESS_API_TOKEN}

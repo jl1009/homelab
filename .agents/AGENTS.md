@@ -51,3 +51,6 @@ When debugging external/third-party services or Docker images (e.g. `paperless-n
 - **No File Scraping**: Do not sequentially download/grep multiple source files from external Git repositories.
 - **Hard Limit**: If source inspection is necessary, check **at most 2 files**. If unresolved, stop and ask the user instead of guessing/pulling more code.
 
+## 5. Connection Retry Limits
+- **Maximum Retries**: When attempting to establish any connection (SSH, HTTP/HTTPS endpoints, database, or socket connections), perform **at most 3 retries**.
+- **Await User Input**: If a connection cannot be established after 3 retries, stop immediately, report the connection failure, and await user input before making any further attempt.

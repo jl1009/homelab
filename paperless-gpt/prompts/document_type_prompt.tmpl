@@ -3,25 +3,27 @@
 {{- if gt (len $pages) 5 -}}
   {{- $trimmedContent = slice $pages 0 5 | join "<!-- PageBreak -->" -}}
 {{- end -}}
-Classify the document (likely in {{.Language}}) into exactly one of these types. Respond ONLY with the type name from the list, or empty string if no match. No other text.
+Classify this {{.Language}} document into exactly one of the available document types.
 
-Types & Definitions:
-- Agreement: Contracts, service agreements, lease, terms.
-- Assessment: Tax assessments, appraisals, reviews, evaluations.
-- Certificate: Official certificates (birth, course, insurance).
-- Discovery Evidence: Court evidence, exhibits, depositions.
-- Invoice: Bills, utility, vendor requests for payment.
-- Legal Filing: Motions, briefs, complaints, subpoenas, court orders.
-- Notice: Notifications, government/agency letters (e.g., IRS), updates.
-- Prepared for Counsel: Internal memos, privileged legal research.
-- Receipt: Proof of payment, sales receipts.
-- Record: Logs, medical records, meeting minutes.
-- Report: Summaries, financial reports, analyses.
-- Statement: Bank, credit card, investment statements.
-- Tax Document: W-2, 1099, tax returns.
+Allowed Types: [{{.AvailableDocumentTypes | join ", "}}]
 
-Allowed Options: [{{.AvailableDocumentTypes | join ", "}}]
-Original Title: {{.Title}}
-Content (first 5 pages max):
+Definitions:
+- Agreement: Contracts, leases, NDAs, service agreements.
+- Assessment: Valuations, tax assessments, evaluations.
+- Certificate: Diplomas, licenses, insurance certificates (COI).
+- Discovery Evidence: Deposition transcripts, litigation exhibits.
+- Invoice: Bills/requests for payment (due/unpaid).
+- Legal Filing: Court pleadings, motions, orders, subpoenas.
+- Notice: Formal letters, agency updates, demand letters.
+- Prepared for Counsel: Internal attorney memos, privileged strategy.
+- Receipt: Proof of paid transaction.
+- Record: Medical records, logs, meeting minutes, deeds.
+- Report: Analytical summaries, status/audit reports.
+- Statement: Periodic bank, credit card, investment statements.
+- Tax Document: Tax forms (W-2, 1099, 1040, K-1).
+
+Title: {{.Title}}
+Content:
 {{$trimmedContent}}
 
+Output ONLY the exact document type name from the allowed list, or an empty string if no clear match. No explanations or extra text.
