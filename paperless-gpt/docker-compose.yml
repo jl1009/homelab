@@ -20,8 +20,11 @@ services:
       PAPERLESS_API_TOKEN: ${PAPERLESS_API_TOKEN}
       PAPERLESS_PUBLIC_URL: ${PAPERLESS_PUBLIC_URL}
 
-      # OCR Configuration (Azure Document Intelligence -> Markdown)
+      # OCR Configuration (Azure Document Intelligence or Google AI Vision -> Markdown)
       OCR_PROVIDER: ${OCR_PROVIDER}
+      VISION_LLM_PROVIDER: ${VISION_LLM_PROVIDER}
+      VISION_LLM_MODEL: ${VISION_LLM_MODEL}
+      GOOGLEAI_API_KEY: ${GOOGLEAI_API_KEY}
       AZURE_DOCAI_ENDPOINT: ${AZURE_DOCAI_ENDPOINT}
       AZURE_DOCAI_KEY: ${AZURE_DOCAI_KEY}
       AZURE_DOCAI_MODEL_ID: ${AZURE_DOCAI_MODEL_ID}
