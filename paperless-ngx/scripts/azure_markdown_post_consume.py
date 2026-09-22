@@ -40,7 +40,7 @@ def main():
     logging.info(f"Starting Azure Markdown OCR for Document ID {document_id}")
 
     endpoint = endpoint.rstrip('/')
-    analyze_url = f"{endpoint}/documentintelligence/documentModels/prebuilt-layout:analyze?api-version=2024-02-29-preview&outputContentFormat=markdown"
+    analyze_url = f"{endpoint}/documentintelligence/documentModels/prebuilt-layout:analyze?api-version=2024-11-30&outputContentFormat=markdown"
 
     try:
         with open(pdf_path, 'rb') as f:
